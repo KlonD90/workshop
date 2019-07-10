@@ -14,7 +14,7 @@ To test:
 
 Add word: 
 
-`curl -H "Content-Type: application/json" -d '{"kalmyk": "эцк", "russian": "отец"}' -x POST 'localhost:3000/words'
+`curl -H "Content-Type: application/json" -d '{"kalmyk": "эцк", "russian": "отец"}' -x POST 'localhost:3000/words'`
 
 Search for word: 
 
