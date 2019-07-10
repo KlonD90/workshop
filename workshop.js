@@ -24,15 +24,48 @@ const readDb = () =>  {
   }
 }
 
-const defaultStateDictionary = [];
+const defaultStateDictionary = {
+};
 
 
 const dictionary =  readDb()
 
-const addWord = async ({kalmyk, russian}) => {
-  dictionary.kalmyk[kalmyk] = russian
-  dictionary.russian[russian] = kalmyk
+const addLink = ({langFrom, wordFrom, langTo, wordTo}) => {
+  if (!dictionary[langFrom][wordFrom]) {
+    dictionary[langFrom][wordFrom] = [{lang: langTo, word: wordTo}]
+  } else {
+    const el = dictionary[langFrom][wordFrom]
+    const isDuplicate = el.filter(
+      ({word, lang}) => word === wordTo && lang === langTo
+    ).length > 0
+    if (!isDuplicate) dictionary[langFrom][wordFrom].push({lang: langTo, word: wordTo})
+  }
+}
+
+const addWord = async ({langFrom, wordFrom, langTo, wordTo}) => {
+  if (!dictionary[langFrom]) {
+    dictionary[langFrom] = {}
+  }
+  if (!dictionary[langTo]) {
+    dictionary[langTo] = {}
+  }
+  addLink({langFrom, langTo, wordFrom, wordTo})
+  addLink({
+    langFrom: langTo,
+    langTo: langFrom,
+    wordFrom: wordTo,
+    wordTo: wordFrom,
+  })
   flushDb()
+}
+
+const getWord = async ({word, langFrom, langTo}) => {
+  if (!dictionary[langFrom])
+    return [];
+  if (!dictionary[langFrom][word])
+    return [];
+  const words = dictionary[langFrom][word]
+  return words.filter(({lang}) => lang === langTo)
 }
 
 const errorHandlingMiddleware = async (ctx, next) => {
@@ -59,10 +92,6 @@ router.post(dictionaryUrl, koaBody(), errorHandlingMiddleware, async ctx => {
   await addWord({kalmyk, russian})
   okMessage(ctx)
 })
-
-const getWord = async ({word, langFrom, langTo}) => {
-  return dictionary.kalmyk[word] || dictionary.russian[word];
-}
 
 const availableLanguages = ['russian', 'kalmyk'];
 router.get(dictionaryUrl, errorHandlingMiddleware, async ctx => {
