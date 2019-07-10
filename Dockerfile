@@ -9,4 +9,6 @@ RUN npm ci
 
 ADD ./ /srv/workshop
 
+EXPOSE 3000
+
 CMD ["node", "workshop.js"]

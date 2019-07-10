@@ -89,7 +89,7 @@ router.post(dictionaryUrl, koaBody(), errorHandlingMiddleware, async ctx => {
   assert.ok(russian, 'should have russian')
   assert.ok(typeof kalmyk === 'string', 'kalmyk should be string')
   assert.ok(typeof russian === 'string', 'russian should be string')
-  await addWord({kalmyk, russian})
+  await addWord({langFrom: 'kalmyk', langTo: 'russian', wordFrom: kalmyk, wordTo: russian})
   okMessage(ctx)
 })
 
@@ -113,4 +113,6 @@ app.use(router.routes())
 app.listen(3000)
 
 
-
+process.on('SIGINT', () => {
+  process.exit(0);
+})
