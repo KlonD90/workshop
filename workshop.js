@@ -17,17 +17,14 @@ const flushDb = () => {
 }
 
 const readDb = () =>  {
-  try{ 
+  try{
     return JSON.parse(fs.readFileSync(dictionaryFile, {encoding: 'utf8'}))
   } catch(e) {
     return defaultStateDictionary
   }
 }
 
-const defaultStateDictionary = {
-  kalmyk: {},
-  russian: {},
-}
+const defaultStateDictionary = [];
 
 
 const dictionary =  readDb()
@@ -63,16 +60,19 @@ router.post(dictionaryUrl, koaBody(), errorHandlingMiddleware, async ctx => {
   okMessage(ctx)
 })
 
-const getWord = async (word) => {
+const getWord = async ({word, langFrom, langTo}) => {
   return dictionary.kalmyk[word] || dictionary.russian[word];
 }
 
-
+const availableLanguages = ['russian', 'kalmyk'];
 router.get(dictionaryUrl, errorHandlingMiddleware, async ctx => {
-  const word = ctx.query.word;
+  const {word, langFrom, langTo} = ctx.query;
   assert.ok(word, 'should be word')
   assert.ok(typeof word, 'word should be string')
-  const result = await getWord(word)
+  assert.ok(availableLanguages.includes(langFrom), 'lang from should be available language')
+  assert.ok(availableLanguages.includes(langTo), 'lang to should be available language')
+  assert.ok(langTo !== langFrom, 'lang from should be not equal lang to')
+  const result = await getWord({word, langFrom, langTo})
   if (!result) {
     return void errorMessage(ctx, {message: 'word not found', status: 404});
   }
