@@ -60,18 +60,41 @@ const addWord = async ({langFrom, wordFrom, langTo, wordTo}) => {
 }
 
 const alphabets = [
-  'а',
-  'б',
-  'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'ц', 'к', 'э', 'х'
+  "а", "о", "у", "ы", "э", "я", "е", "ё", "ю", "и", "б", "в", "г", "д", "й", "ж", "з", "к", "л", "м", "н", "п", "р", "с", "т", "ф", "х", "ц", "ч", "ш", "щ", "ь", "ъ"
 ];
 
-const getWord = async ({word, langFrom, langTo}) => {
+const getSingleWord = async ({word, langFrom, langTo}) => {
   if (!dictionary[langFrom])
     return []
   if (!dictionary[langFrom][word])
     return []
   const words = dictionary[langFrom][word]
   return words.filter(({lang}) => lang === langTo)
+}
+
+const replaceChar = (word, i, char) => {
+  const arrWord = word.split('')
+  arrWord[i] = char;
+  return arrWord.join('');
+}
+const generateWordForm = (word, alphabet) => {
+  const res = []
+  for (let i =0; i < word.length; i++) {
+    for (const char of alphabet) {
+      res.push(replaceChar(word, i, char))
+    }
+  }
+  return res
+}
+
+const getWord = async ({word, langFrom, langTo}) => {
+  const wordForms = [word].concat(generateWordForm(word, alphabets))
+  const possibleWords = await Promise.all(wordForms
+    .map(
+      x => getSingleWord({word: x, langFrom, langTo})
+    )
+  )
+  return possibleWords.reduce((r, x) => r.concat(x), [])
 }
 
 const errorHandlingMiddleware = async (ctx, next) => {
@@ -97,7 +120,12 @@ router.post(dictionaryUrl, koaBody(), errorHandlingMiddleware, async ctx => {
   assert.ok(russian, 'should have russian')
   assert.ok(typeof kalmyk === 'string', 'kalmyk should be string')
   assert.ok(typeof russian === 'string', 'russian should be string')
-  await addWord({langFrom: 'kalmyk', langTo: 'russian', wordFrom: normalizeWord(kalmyk), wordTo: normalizeWord(russian)})
+  await addWord({
+    langFrom: 'kalmyk',
+    langTo: 'russian',
+    wordFrom: normalizeWord(kalmyk),
+    wordTo: normalizeWord(russian),
+  })
   okMessage(ctx)
 })
 
@@ -106,11 +134,11 @@ router.get(dictionaryUrl, errorHandlingMiddleware, async ctx => {
   const {word, langFrom, langTo} = ctx.query;
   assert.ok(word, 'should be word')
   assert.ok(typeof word, 'word should be string')
-  const normalizeWord = normalizeWord(word)
+  const normalizedWord = normalizeWord(word)
   assert.ok(availableLanguages.includes(langFrom), 'lang from should be available language')
   assert.ok(availableLanguages.includes(langTo), 'lang to should be available language')
   assert.ok(langTo !== langFrom, 'lang from should be not equal lang to')
-  const result = await getWord({word: normalizeWord, langFrom, langTo})
+  const result = await getWord({word: normalizedWord, langFrom, langTo})
   if (!result) {
     return void errorMessage(ctx, {message: 'word not found', status: 404});
   }
