@@ -59,11 +59,17 @@ const addWord = async ({langFrom, wordFrom, langTo, wordTo}) => {
   flushDb()
 }
 
+const alphabets = [
+  'а',
+  'б',
+  'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'ц', 'к', 'э', 'х'
+];
+
 const getWord = async ({word, langFrom, langTo}) => {
   if (!dictionary[langFrom])
-    return [];
+    return []
   if (!dictionary[langFrom][word])
-    return [];
+    return []
   const words = dictionary[langFrom][word]
   return words.filter(({lang}) => lang === langTo)
 }
@@ -83,13 +89,15 @@ const okMessage = (ctx, data) => {
   ctx.body = {code: 'ok', data}
 }
 
+const normalizeWord = word => word.toLocaleLowerCase().normalize('NFC')
+
 router.post(dictionaryUrl, koaBody(), errorHandlingMiddleware, async ctx => {
   const {kalmyk, russian} = ctx.request.body;
   assert.ok(kalmyk, 'should have kalmyk')
   assert.ok(russian, 'should have russian')
   assert.ok(typeof kalmyk === 'string', 'kalmyk should be string')
   assert.ok(typeof russian === 'string', 'russian should be string')
-  await addWord({langFrom: 'kalmyk', langTo: 'russian', wordFrom: kalmyk, wordTo: russian})
+  await addWord({langFrom: 'kalmyk', langTo: 'russian', wordFrom: normalizeWord(kalmyk), wordTo: normalizeWord(russian)})
   okMessage(ctx)
 })
 
@@ -98,10 +106,11 @@ router.get(dictionaryUrl, errorHandlingMiddleware, async ctx => {
   const {word, langFrom, langTo} = ctx.query;
   assert.ok(word, 'should be word')
   assert.ok(typeof word, 'word should be string')
+  const normalizeWord = normalizeWord(word)
   assert.ok(availableLanguages.includes(langFrom), 'lang from should be available language')
   assert.ok(availableLanguages.includes(langTo), 'lang to should be available language')
   assert.ok(langTo !== langFrom, 'lang from should be not equal lang to')
-  const result = await getWord({word, langFrom, langTo})
+  const result = await getWord({word: normalizeWord, langFrom, langTo})
   if (!result) {
     return void errorMessage(ctx, {message: 'word not found', status: 404});
   }
