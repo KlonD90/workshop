@@ -1,6 +1,6 @@
 # Nodejs Workshop
 
-You need install nodejs before start. Any version greater or equal than 8 is acceptable.
+You need to install nodejs before start. Any version greater or equal than 8 is acceptable.
 
 To install:
 
