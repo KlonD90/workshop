@@ -88,15 +88,24 @@ const generateWordForm = (word, alphabet) => {
 }
 
 const getWord = async ({word, langFrom, langTo}) => {
+  const specificResult = await getSingleWord({word, langTo, langFrom})
+  if (specificResult.length > 0) {
+    return specificResult
+  }
   const wordForms = [word].concat(generateWordForm(word, alphabets))
   const possibleWords = await Promise.all(wordForms
     .map(
       x => getSingleWord({word: x, langFrom, langTo})
     )
   )
-  return possibleWords.reduce((r, x) => r.concat(x), [])
+  const allWords = possibleWords.reduce((r, x) => r.concat(x), []);
+  const wordSet = new Set(
+    allWords.map(x => JSON.stringify(x))
+  );
+  return Array.from(wordSet).map(x => JSON.parse(x))
 }
 
+[1, 2, 3].map(x => x + 1)
 const errorHandlingMiddleware = async (ctx, next) => {
   try {
     await next()
