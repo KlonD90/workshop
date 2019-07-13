@@ -7,56 +7,43 @@ const app = new Koa()
 const router = new Router()
 const koaBody = require('koa-body')
 
+const {sequelize, Word, WordLink} = require('./models')
 const dictionaryUrl = '/words/'
 
 
-const dictionaryFile = 'dictionary.json'
-
-const flushDb = () => {
-  fs.writeFileSync(dictionaryFile, JSON.stringify(dictionary), {encoding: 'utf8'})
-}
-
-const readDb = () =>  {
-  try{
-    return JSON.parse(fs.readFileSync(dictionaryFile, {encoding: 'utf8'}))
-  } catch(e) {
-    return defaultStateDictionary
-  }
-}
-
-const defaultStateDictionary = {
-};
-
-
-const dictionary =  readDb()
-
-const addLink = ({langFrom, wordFrom, langTo, wordTo}) => {
-  if (!dictionary[langFrom][wordFrom]) {
-    dictionary[langFrom][wordFrom] = [{lang: langTo, word: wordTo}]
-  } else {
-    const el = dictionary[langFrom][wordFrom]
-    const isDuplicate = el.filter(
-      ({word, lang}) => word === wordTo && lang === langTo
-    ).length > 0
-    if (!isDuplicate) dictionary[langFrom][wordFrom].push({lang: langTo, word: wordTo})
-  }
-}
-
 const addWord = async ({langFrom, wordFrom, langTo, wordTo}) => {
-  if (!dictionary[langFrom]) {
-    dictionary[langFrom] = {}
-  }
-  if (!dictionary[langTo]) {
-    dictionary[langTo] = {}
-  }
-  addLink({langFrom, langTo, wordFrom, wordTo})
-  addLink({
-    langFrom: langTo,
-    langTo: langFrom,
-    wordFrom: wordTo,
-    wordTo: wordFrom,
+  const [res_a, created_a] = await Word.findOrCreate({
+    where: {
+      lang: langFrom,
+      word: wordFrom
+    },
+    defaults: {
+      lang: langFrom,
+      word: wordFrom      
+    }
   })
-  flushDb()
+
+  const [res_b, created_b] = await Word.findOrCreate({
+    where: {
+      lang: langTo,
+      word: wordTo,
+    },
+    defaults: {
+      lang: langTo,
+      word: wordTo,
+    }
+  })
+
+  await WordLink.findOrCreate({
+    where: {
+      word_a: res_a.id,
+      word_b: res_b.id
+    },
+    defaults: {
+      word_a: res_a.id,
+      word_b: res_b.id      
+    }
+  })
 }
 
 const alphabets = [
@@ -64,12 +51,19 @@ const alphabets = [
 ];
 
 const getSingleWord = async ({word, langFrom, langTo}) => {
-  if (!dictionary[langFrom])
-    return []
-  if (!dictionary[langFrom][word])
-    return []
-  const words = dictionary[langFrom][word]
-  return words.filter(({lang}) => lang === langTo)
+  const res = await sequelize.query(`
+    SELECT w2.* 
+    FROM "Words" w1 
+    INNER JOIN "WordLinks" wl on wl.word_a = w1.id 
+    INNER JOIN "Words" w2  on w2.id = wl.word_b
+    WHERE w1.word = $1 
+    AND w1.lang = $2
+    `, {
+      bind: [word, langFrom],
+      type: sequelize.QueryTypes.SELECT
+    }
+  )
+  return res
 }
 
 const replaceChar = (word, i, char) => {
