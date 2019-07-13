@@ -1,5 +1,7 @@
 FROM node:10-jessie
 
+RUN apt-get update && apt-get install -f -y postgresql-client
+
 RUN mkdir -p /srv/workshop
 WORKDIR /srv/workshop/
 
@@ -11,4 +13,4 @@ ADD ./ /srv/workshop
 
 EXPOSE 3000
 
-CMD ["node", "workshop.js"]
+CMD ["./run.sh"]
